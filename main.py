@@ -3,6 +3,8 @@ import re
 import progressbar
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from gensim.models import Word2Vec
 
 feature_lst=[]
 review_id_lst = []
