@@ -1,4 +1,5 @@
 import json
+import re
 import progressbar
 
 feature_lst=[]
@@ -14,10 +15,15 @@ def reviewLength(l):
 	return result
 
 # input: a list l of json records
-# output: consider to use dictionaty as output. Key will be the review id. 
+# output: returns the average length of a sentence in a review 
 def averageSentenceLength(l):
-	result = dict()
-
+	result = []
+	for review in l:
+		review_text = review['reviewText']
+		sentences = [review_text.strip() for review_text in re.split('[\.\?!]' , original) if review_text]
+		for w in sentences:
+			word_sum += len(w.split() )
+		result.append( float(word_sum / len(sentences) ) )
 	return result
 
 # input: a list of training text and training labels
