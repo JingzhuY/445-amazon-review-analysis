@@ -5,9 +5,11 @@ feature_lst=[]
 review_id_lst = []
 # ------------each function in this part returns a feature list for all records---------
 # input: a list l of json records
-# output: consider to use dictionaty as output. Key will be the review id. 
+# output: returns the word count of each review
 def reviewLength(l):
-	result = dict()
+	result = []
+	for review in l:
+		result.append( len(review['reviewText'].split()) )
 
 	return result
 
@@ -63,6 +65,7 @@ def probabilityWord2Vec(train_text, train_labels, test_text):
 def preprocess(l):
 	result = [[]]
 	
+	# vector of review lengths
 	review_length = reviewLength(l)
 	average_sentence_length = averageSentenceLength(l)
 	#... other features
