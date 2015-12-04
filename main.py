@@ -18,7 +18,43 @@ def averageSentenceLength(l):
 
 	return result
 
-# ... functions for other features
+# input: a list of training text and training labels
+# output: a list of probabilities that a review is helpful
+def probabilityWord2Vec(train_text, train_labels, test_text):
+	sentences = []
+    for review in train_text:
+        sentences.append(review.split())
+    for review in test_text:
+        sentences.append(review.split())
+
+    # trains word2vec
+    model = Word2Vec(sentences, size = 100, window = 5, min_count = 1, workers = 4)
+   
+    # creates features for training data
+    train_features = []
+    for review in train_text:
+        vector_average = 0
+        words = review.split()
+        for word in words:
+            vector_average = vector_average + model[word]
+        vector_average = vector_average / len(words)
+        train_features.append(vector_average)
+
+    # creates features for test data
+    test_features = []
+    for review in test_text:
+        vector_average = 0
+        words = review.split()
+        for word in words:
+            vector_average = vector_average + model[word]
+        vector_average = vector_average / len(words)
+        test_features.append(vector_average)
+
+    # trains logistic regression model
+    model.fit(train_features, train_labels)
+
+    # returns predicted probabilities of the test reviews
+    return model.predict_proba(test_features)
 
 
 #------------preprocess prepare the feature matrix for training---------------
