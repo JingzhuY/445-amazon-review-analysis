@@ -1,6 +1,8 @@
 import json
 import re
 import progressbar
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 feature_lst=[]
 review_id_lst = []
@@ -9,22 +11,52 @@ review_id_lst = []
 # output: returns the word count of each review
 def reviewLength(l):
 	result = []
+	print('Review Length function initiating')
+	bar = progressbar.ProgressBar(maxval = len(l) , \
+        widgets=[progressbar.Bar('=','[',']'), ' ', progressbar.Percentage()])
+	i = 0
+	bar.start()
 	for review in l:
+		bar.update(i + 1)
 		result.append( len(review['reviewText'].split()) )
-
+	bar.finish()
 	return result
 
 # input: a list l of json records
 # output: returns the average length of a sentence in a review 
 def averageSentenceLength(l):
 	result = []
+	bar = progressbar.ProgressBar(maxval = len(l) , \
+        widgets=[progressbar.Bar('=','[',']'), ' ', progressbar.Percentage()])
+	bar.start()
+	i = 0
 	for review in l:
 		review_text = review['reviewText']
 		sentences = [review_text.strip() for review_text in re.split('[\.\?!]' , original) if review_text]
+		word_sum = 0
+		bar.update(i + 1)
 		for w in sentences:
-			word_sum += len(w.split() )
+			word_sum += len( w.split() )
 		result.append( float(word_sum / len(sentences) ) )
+	bar.finish()
 	return result
+
+# input:  a list l of string
+# output: a matrix where the (i,j) component is how many times 
+#         the j-th word appear in the i-th document
+def tf(l):
+    result = []
+    vectorizer = CountVectorizer(min_df=1)
+    result = vectorizer.fit_transform(l).toarray()
+    return result
+
+# input:  a list l of string
+# output: a matrix where the (i,j) component is the tf-idf value of the j-th word in the i-th document
+def tfidf(l):
+    result = []
+    vectorizer = TfidfVectorizer(min_df = 1)
+    result = vectorizer.fit_transform(l).toarray()
+    return result
 
 # input: a list of training text and training labels
 # output: a list of probabilities that a review is helpful
