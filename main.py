@@ -1,5 +1,7 @@
 import json
 import progressbar
+from sklearn.linear_model import LogisticRegression
+from gensim.models import Word2Vec
 
 feature_lst=[]
 review_id_lst = []
