@@ -145,7 +145,7 @@ def probabilityWord2Vec(train_text, train_labels, test_text):
 # output: a feature matrix object ready for training, and a list "train_t" of labels
 def preprocess(l, helpfulness):
 	result = []
-	
+	train_t = []
 	# vector of review lengths
 	review_length = reviewLength(l)
 	average_sentence_length = averageSentenceLength(l)
@@ -163,16 +163,20 @@ def preprocess(l, helpfulness):
 		# ... append other features to the list
 		
 		result.append(record)
-
 	# get train label from "helpfulness"
-	train_t = helpfulness #some function here
+	for h in helpfulness:
+		if h[0] > h[1]/2: #if more than half rated helpful
+			train_t.append(1) #positive
+		else:
+			train_t.append(0) #negative
+
 	return (result, train_t)
 
 # ----------------training------------------
 def main():
 	raw_reviews = []
 	helpfulness = []
-	rev_size = 18000
+	rev_size = 20000
 	# progress bar in terminal
 	bar = progressbar.ProgressBar(maxval = rev_size , \
         widgets=[progressbar.Bar('=','[',']'), ' ', progressbar.Percentage()])
@@ -187,17 +191,21 @@ def main():
 	    	bar.update(i + 1)
 	    	i += 1
 	    	line = json.loads(line)
-	    	# skip the line whose review is empty
-	    	if len(line['reviewText']) != 0:
+	    	# skip the lines with empty review
+	    	# skip the lines with ratings of helpfulness less than a threshold (5 for now)
+	    	helpfulThreshold = 5
+	    	if len(line['reviewText']) != 0 and line['helpful'][1] >= helpfulThreshold:
 	       		raw_reviews.append(line)
 	       		helpfulness.append(line['helpful'])
 	bar.finish()
 	print('Parsing finished')
 	# get the feature matrix and labels
 	(feature_matrix, train_t)= preprocess(raw_reviews, helpfulness)
+	# for testing
 	print len(feature_matrix)
-	print feature_matrix[:50]
-	print train_t[:50]
+	
+	print sum(1 for t in train_t if t==1)
+	print sum(1 for t in train_t if t==0)
 
 if __name__ == '__main__':
     main()
