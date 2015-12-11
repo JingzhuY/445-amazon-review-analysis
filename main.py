@@ -5,6 +5,9 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from gensim.models import Word2Vec
+import random
+from sklearn import svm
+import numpy
 #from collections import Counter
 
 feature_lst=[]
@@ -83,6 +86,10 @@ def capWordCount(l):
 		result.append(c)
 	return result
 
+def ratings(l):
+	result = []
+	
+	return result
 
 # input:  a list l of string
 # output: a matrix where the (i,j) component is how many times 
@@ -142,11 +149,11 @@ def probabilityWord2Vec(train_text, train_labels, test_text):
 
 #------------preprocess prepare the feature matrix for training---------------
 # input:  a list l of json records, and a list of helpfulness labels
-# output: a feature matrix object ready for training, and a list "train_t" of labels
+# output: train_x, valid_x, test_x, train_t, valid_t, test_t
 def preprocess(l, helpfulness):
 	result = []
-	train_t = []
-	# vector of review lengths
+	label = []
+	# result list
 	review_length = reviewLength(l)
 	average_sentence_length = averageSentenceLength(l)
 	punctuation_count = punctuationCount(l)
@@ -166,12 +173,59 @@ def preprocess(l, helpfulness):
 	# get train label from "helpfulness"
 	for h in helpfulness:
 		if h[0] > h[1]/2: #if more than half rated helpful
-			train_t.append(1) #positive
+			label.append(1) #positive
 		else:
-			train_t.append(0) #negative
+			label.append(0) #negative
 
-	return (result, train_t)
+	# seperate training(40%), validation(30%) and testing(30%) sets
+	length = len(result)
+	valid_len = length / 10 * 3
+	test_len = length / 10 * 3
+	train_len = length - valid_len - test_len
 
+	valid_x = result[:valid_len]
+	test_x = result[valid_len:(valid_len+test_len)]
+	train_x = result[(valid_len+test_len):]
+
+	valid_t = label[:valid_len]
+	test_t = label[valid_len:(valid_len+test_len)]
+	train_t = label[(valid_len+test_len):]
+	return (train_x, valid_x, test_x, train_t, valid_t, test_t)
+
+def logisticRegression(train_X, train_t, val_X, val_t):
+	C=[0.001, 0.01, 0.1, 1, 10, 100, 1000]
+	for c in C:
+		lr=LogisticRegression(C=c, penalty='l2')
+		#sparse matrix
+		#train_X=csr_matrix(train_X)
+		#val_X=csr_matrix(val_X)
+		train_X = numpy.array(train_X)
+		val_X = numpy.array(val_X)
+		#print train_X
+		pred_val_t=lr.fit(train_X,train_t).predict(val_X)
+		# calculat accuracy
+		mismatch=0
+		for r,p in zip(val_t, pred_val_t):
+			if r!=p:
+				mismatch+=1
+		accuracy=1-float(mismatch)/len(val_t)
+		print "C="+str(c)+", accuracy="+ str(accuracy)
+
+def SVM(train_X, train_t, val_X, val_t):
+    C=[0.001, 0.01, 0.1, 1, 10, 100]
+    for c in C:
+        clf = svm.SVC(C=c, kernel='linear') # change kernels
+        #train_X=csr_matrix(train_X)
+        #val_X=csr_matrix(val_X)
+        train_X = numpy.array(train_X)
+        val_X = numpy.array(val_X)
+        pred_val_t=clf.fit(train_X,train_t).predict(val_X)
+        mismatch=0
+        for r,p in zip(val_t, pred_val_t):
+            if r!=p:
+                mismatch+=1
+        accuracy=1-float(mismatch)/len(val_t)
+        print "C="+str(c)+", accuracy="+ str(accuracy)
 # ----------------training------------------
 def main():
 	raw_reviews = []
@@ -200,9 +254,24 @@ def main():
 	bar.finish()
 	print('Parsing finished')
 	# get the feature matrix and labels
-	(feature_matrix, train_t)= preprocess(raw_reviews, helpfulness)
+	(train_x, valid_x, test_x, train_t, valid_t, test_t)= preprocess(raw_reviews, helpfulness)
 	# for testing
-	print len(feature_matrix)
+	print len(train_x)
+	print len(valid_x)
+	print len(test_x)
+	print '------SVM------'
+	SVM(train_x, train_t, valid_x, valid_t)
+	print '-------logisticRegression------'
+	logisticRegression(train_x, train_t, valid_x, valid_t)
+	'''
+	NOTE:
+	bag of words / word2vec is not included in the feature righ now (not sure how to add those...?)
+	current accuracy on validation dataset is about 81%
+	In 1050 records, 872 are positive and 178 are negative, will the unbalanced labels influence accuracy?
+	adjuct the labeling strategy (how to decide whether or not to drop the record, and whether it's helpful or not helpful)
+
+	'''
+	print len(train_x)
 	
 	print sum(1 for t in train_t if t==1)
 	print sum(1 for t in train_t if t==0)
