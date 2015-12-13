@@ -1,2 +1,6 @@
 *.json
 !spec/*.json
+finefoods.txt
+finefoods_short.json
+reviews_Sports_and_Outdoors.json
+venv/

@@ -116,7 +116,7 @@ def word2VecProb(l, helpfulness):
 	reviews = []
 
 	for product in l:
-		reviews.append(review['reviewText'])
+		reviews.append(product['reviewText'])
 
 	length = len(result)
 	valid_len = length / 10 * 3
