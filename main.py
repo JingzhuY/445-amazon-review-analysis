@@ -114,11 +114,12 @@ def word2VecProb(l, helpfulness):
 	
 	# separate training(40%), validation(30%) and testing(30%) sets
 	reviews = []
+	labels = []
 
 	for product in l:
 		reviews.append(product['reviewText'])
 
-	length = len(result)
+	length = len(reviews)
 	valid_len = length / 10 * 3
 	test_len = length / 10 * 3
 	train_len = length - valid_len - test_len
@@ -129,21 +130,22 @@ def word2VecProb(l, helpfulness):
 
 	sentences = []
 	for review in train_text:
-		sentences.append(review['reviewText'].split())
+		sentences.append(review.split())
 	for review in test_text:
-		sentences.append(review['reviewText'].split())
+		sentences.append(review.split())
 	for review in valid_text:
-		sentences.append(review['reviewText'].split())
+		sentences.append(review.split())
 
 
 	# get train label from "helpfulness"
 	for h in helpfulness:
 		if h[0] > h[1]/2: #if more than half rated helpful
-			label.append(1) #positive
+			labels.append(1) #positive
 		else:
-			label.append(0) #negative
+			labels.append(0) #negative
 
-	train_labels = label[(valid_len+test_len):]
+	train_labels = labels[(valid_len+test_len):]
+	valid_labels = labels[:valid_len]
 
 
 	# trains word2vec
@@ -180,10 +182,19 @@ def word2VecProb(l, helpfulness):
 		valid_features.append(vector_average)
 
 	# trains logistic regression model
-	model.fit(train_features, train_labels)
+	lr = LogisticRegression(C = .001)
+	lr.fit(train_features, train_labels)
 
 	# returns predicted probabilities of the test reviews
-	return model.predict_proba(valid_features) + model.predict_proba(test_features) + model.predict_proba(train_features)
+
+	valid_prob = lr.predict_proba(valid_features) 
+	test_prob = lr.predict_proba(test_features) 
+	train_prob = lr.predict_proba(train_features)
+
+	print "score: "
+	print lr.score(valid_features, valid_labels)
+
+	return numpy.concatenate((valid_prob[:,1], test_prob[:,1], train_prob[:,1]), axis = 0)
 
 
 #------------preprocess prepare the feature matrix for training---------------
@@ -197,17 +208,17 @@ def preprocess(l, helpfulness):
 	average_sentence_length = averageSentenceLength(l)
 	punctuation_count = punctuationCount(l)
 	cap_word_count = capWordCount(l)
-	word2vec_prob = word2VecProb(l, helpfulness)
+	#word2vec_prob = word2VecProb(l, helpfulness)
 	#... other features
 
 	# for each review record, get the result of each feature, and append to feature matrix
 	for k in range(0,len(l)):
 		record = []
-		record.append(review_length[k])
+		#record.append(review_length[k])
 		record.append(average_sentence_length[k])
-		record.append(punctuation_count[k])
-		record.append(cap_word_count[k])
-		record.append(word2vec_prob[k])
+		#record.append(punctuation_count[k])
+		#record.append(cap_word_count[k])
+		#record.append(word2vec_prob[k])
 		# ... append other features to the list
 		
 		result.append(record)
