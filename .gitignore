@@ -1,4 +1,6 @@
 *.json
+*~
+*.pyc
 !spec/*.json
 finefoods.txt
 finefoods_short.json
