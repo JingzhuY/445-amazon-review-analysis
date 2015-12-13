@@ -42,7 +42,7 @@ def averageSentenceLength(l):
 		review_text = review['reviewText']
 		sentences = [review_text.strip() for review_text in re.split('[\.\?!]' , review_text) if review_text]
 		if len(sentences)==0:
-			#print "text: "+review_text
+			print "text: "+review_text
 		word_sum = 0
 		bar.update(i + 1)
 		i+=1
