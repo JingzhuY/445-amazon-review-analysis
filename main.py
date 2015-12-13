@@ -33,6 +33,7 @@ def reviewLength(l):
 # output: returns the average length of a sentence in a review 
 def averageSentenceLength(l):
 	result = []
+	print ('Counting average sentence length')
 	bar = progressbar.ProgressBar(maxval = len(l) , \
         widgets=[progressbar.Bar('=','[',']'), ' ', progressbar.Percentage()])
 	bar.start()
@@ -41,7 +42,7 @@ def averageSentenceLength(l):
 		review_text = review['reviewText']
 		sentences = [review_text.strip() for review_text in re.split('[\.\?!]' , review_text) if review_text]
 		if len(sentences)==0:
-			print "text: "+review_text
+			#print "text: "+review_text
 		word_sum = 0
 		bar.update(i + 1)
 		i+=1
@@ -208,7 +209,7 @@ def preprocess(l, helpfulness):
 	average_sentence_length = averageSentenceLength(l)
 	punctuation_count = punctuationCount(l)
 	cap_word_count = capWordCount(l)
-	#word2vec_prob = word2VecProb(l, helpfulness)
+	word2vec_prob = word2VecProb(l, helpfulness)
 	#... other features
 
 	# for each review record, get the result of each feature, and append to feature matrix
@@ -255,6 +256,11 @@ def logisticRegression(train_X, train_t, val_X, val_t):
 		val_X = numpy.array(val_X)
 		#print train_X
 		pred_val_t=lr.fit(train_X,train_t).predict(val_X)
+
+		print "predictions: "
+		print sum(1 for t in pred_val_t if t==1)
+		print sum(1 for t in pred_val_t if t==0)
+
 		# calculat accuracy
 		mismatch=0
 		for r,p in zip(val_t, pred_val_t):
@@ -272,6 +278,9 @@ def SVM(train_X, train_t, val_X, val_t):
         train_X = numpy.array(train_X)
         val_X = numpy.array(val_X)
         pred_val_t=clf.fit(train_X,train_t).predict(val_X)
+
+        print "predictions: "
+
         mismatch=0
         for r,p in zip(val_t, pred_val_t):
             if r!=p:
@@ -290,17 +299,18 @@ def main():
 	bar.start()
 	i = 0
 	#with open('reviews_Baby.jsony.json') as f:
-	with open('reviews_Sports_and_Outdoors.json') as f:
+	with open('reviews_Movies_and_TV.json') as f:
 	    for line in f:
 	    	if i >= rev_size:
 	    		break
 	    	bar.update(i + 1)
-	    	i += 1
+	    	
 	    	line = json.loads(line)
 	    	# skip the lines with empty review
 	    	# skip the lines with ratings of helpfulness less than a threshold (5 for now)
 	    	helpfulThreshold = 5
 	    	if len(line['reviewText']) != 0 and line['helpful'][1] >= helpfulThreshold:
+	    		i += 1
 	       		raw_reviews.append(line)
 	       		helpfulness.append(line['helpful'])
 	bar.finish()

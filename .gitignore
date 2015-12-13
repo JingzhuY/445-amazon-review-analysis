@@ -2,5 +2,6 @@
 !spec/*.json
 finefoods.txt
 finefoods_short.json
+reviews_Amazon_Instant_Video.json
+reviews_Movies_and_TV.json
 reviews_Sports_and_Outdoors.json
-venv/
