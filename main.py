@@ -8,6 +8,9 @@ from gensim.models import Word2Vec
 import random
 from sklearn import svm
 import numpy
+import csv
+from sklearn import preprocessing
+import numpy as np
 #from collections import Counter
 
 feature_lst=[]
@@ -85,11 +88,37 @@ def capWordCount(l):
 		i+=1
 		c = sum(1 for c in review['reviewText'].split() if c==c.upper())
 		result.append(c)
+	bar.finish()
 	return result
 
-def ratings(l):
+# input: a list l of json records
+# output: the count of words in title(summary)
+def titleWordsCount(l):
 	result = []
-	
+	print 'counting title words'
+	bar = progressbar.ProgressBar(maxval = len(l) , \
+        widgets=[progressbar.Bar('=','[',']'), ' ', progressbar.Percentage()])
+	bar.start()
+	i = 0
+	for review in l:
+		i+=1
+		result.append( len(review['summary'].split()) )
+	bar.finish()
+	return result
+
+# input: a list
+# output: review rating
+def getRating(l):
+	result = []
+	print 'getting review ratings'
+	bar = progressbar.ProgressBar(maxval = len(l) , \
+        widgets=[progressbar.Bar('=','[',']'), ' ', progressbar.Percentage()])
+	bar.start()
+	i = 0
+	for review in l:
+		i += 1
+		result.append(review['overall'])
+	bar.finish()
 	return result
 
 # input:  a list l of string
@@ -112,7 +141,7 @@ def tfidf(l):
 # input: a list of training text and training labels
 # output: a list of probabilities that a review is helpful
 def word2VecProb(l, helpfulness):
-	
+	print 'calculating word2vec prob'
 	# separate training(40%), validation(30%) and testing(30%) sets
 	reviews = []
 	labels = []
@@ -207,28 +236,45 @@ def preprocess(l, helpfulness):
 	# result list
 	review_length = reviewLength(l)
 	average_sentence_length = averageSentenceLength(l)
-	punctuation_count = punctuationCount(l)
-	cap_word_count = capWordCount(l)
+	#punctuation_count = punctuationCount(l)
+	#cap_word_count = capWordCount(l)
+	title_word_count = titleWordsCount(l)
+	rating = getRating(l)
 	word2vec_prob = word2VecProb(l, helpfulness)
 	#... other features
 
 	# for each review record, get the result of each feature, and append to feature matrix
 	for k in range(0,len(l)):
 		record = []
-		#record.append(review_length[k])
+		record.append(review_length[k])
 		record.append(average_sentence_length[k])
 		#record.append(punctuation_count[k])
 		#record.append(cap_word_count[k])
-		#record.append(word2vec_prob[k])
+		record.append(title_word_count[k])
+		record.append(rating[k])
+		record.append(word2vec_prob[k])
 		# ... append other features to the list
 		
 		result.append(record)
-	# get train label from "helpfulness"
+
+	# scaling
+	result = np.array(result)
+	result = preprocessing.scale(result)
+	#get train label from "helpfulness"
 	for h in helpfulness:
-		if h[0] > h[1]/2: #if more than half rated helpful
-			label.append(1) #positive
+		hrate = float(h[0])/h[1]
+		#label.append(hrate)
+		if hrate > 0.6: # 0.6: 53% positive
+			label.append(1) #possitive
 		else:
 			label.append(0) #negative
+	#csvfile = file('reviews.csv','wb')
+	#writer = csv.writer(csvfile)
+	#rows=[]
+	#for (line,l) in zip(result,label):
+	#	line.append(l)
+	#	rows.append(line)
+	#writer.writerows(rows)
 
 	# seperate training(40%), validation(30%) and testing(30%) sets
 	length = len(result)
@@ -257,9 +303,9 @@ def logisticRegression(train_X, train_t, val_X, val_t):
 		#print train_X
 		pred_val_t=lr.fit(train_X,train_t).predict(val_X)
 
-		print "predictions: "
-		print sum(1 for t in pred_val_t if t==1)
-		print sum(1 for t in pred_val_t if t==0)
+		#print "predictions: "
+		#print sum(1 for t in pred_val_t if t==1)
+		#print sum(1 for t in pred_val_t if t==0)
 
 		# calculat accuracy
 		mismatch=0
@@ -279,7 +325,7 @@ def SVM(train_X, train_t, val_X, val_t):
         val_X = numpy.array(val_X)
         pred_val_t=clf.fit(train_X,train_t).predict(val_X)
 
-        print "predictions: "
+        #print "predictions: "
 
         mismatch=0
         for r,p in zip(val_t, pred_val_t):
@@ -321,15 +367,16 @@ def main():
 	print len(train_x)
 	print len(valid_x)
 	print len(test_x)
-	print '------SVM------'
-	SVM(train_x, train_t, valid_x, valid_t)
+	
 	print '-------logisticRegression------'
 	logisticRegression(train_x, train_t, valid_x, valid_t)
+	print '------SVM------'
+	SVM(train_x, train_t, valid_x, valid_t)
 	'''
-	NOTE:
-	bag of words / word2vec is not included in the feature righ now (not sure how to add those...?)
-	current accuracy on validation dataset is about 81%
-	In 1050 records, 872 are positive and 178 are negative, will the unbalanced labels influence accuracy?
+	UPDATE:
+	added two features: title word count, review rating. Two features removed: cap words count, punctuation count
+	label is possitive if helpfulness rate (rated helpful/ total) greater than 0.6
+	
 	adjuct the labeling strategy (how to decide whether or not to drop the record, and whether it's helpful or not helpful)
 
 	'''
