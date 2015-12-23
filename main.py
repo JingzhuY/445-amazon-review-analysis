@@ -169,8 +169,10 @@ def word2VecProb(l, helpfulness):
 
 	# get train label from "helpfulness"
 	for h in helpfulness:
-		if h[0] > h[1]/2: #if more than half rated helpful
-			labels.append(1) #positive
+		hrate = float(h[0])/h[1]
+		#label.append(hrate)
+		if hrate > 0.6: # 0.6: 53% positive
+			labels.append(1) #possitive
 		else:
 			labels.append(0) #negative
 
@@ -240,7 +242,7 @@ def preprocess(l, helpfulness):
 	#cap_word_count = capWordCount(l)
 	title_word_count = titleWordsCount(l)
 	rating = getRating(l)
-	word2vec_prob = word2VecProb(l, helpfulness)
+	#word2vec_prob = word2VecProb(l, helpfulness)
 	#... other features
 
 	# for each review record, get the result of each feature, and append to feature matrix
@@ -252,7 +254,7 @@ def preprocess(l, helpfulness):
 		#record.append(cap_word_count[k])
 		record.append(title_word_count[k])
 		record.append(rating[k])
-		record.append(word2vec_prob[k])
+		#record.append(word2vec_prob[k])
 		# ... append other features to the list
 		
 		result.append(record)
