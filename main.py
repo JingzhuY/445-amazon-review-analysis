@@ -138,6 +138,30 @@ def tfidf(l):
     result = vectorizer.fit_transform(l).toarray()
     return result
 
+def word2VecScore(l):
+	result = []
+	reviews = []
+
+	for product in l:
+		reviews.append(product['reviewText'])
+
+	sentences = []
+
+	for review in reviews:
+		sentences.append(review.split())
+
+	model = Word2Vec(sentences, size = 100, window = 5, min_count = 1, workers = 4)
+
+	for review in reviews:
+		vector_average = 0
+		words = review.split()
+		for word in words:
+			vector_average = vector_average + model[word]
+		vector_average = vector_average / len(words)
+		result.append(vector_average)
+
+	return result
+
 # input: a list of training text and training labels
 # output: a list of probabilities that a review is helpful
 def word2VecProb(l, helpfulness):
@@ -214,7 +238,7 @@ def word2VecProb(l, helpfulness):
 		valid_features.append(vector_average)
 
 	# trains logistic regression model
-	lr = LogisticRegression(C = .001)
+	lr=LogisticRegression(C=1, penalty='l2')
 	lr.fit(train_features, train_labels)
 
 	# returns predicted probabilities of the test reviews
@@ -222,9 +246,6 @@ def word2VecProb(l, helpfulness):
 	valid_prob = lr.predict_proba(valid_features) 
 	test_prob = lr.predict_proba(test_features) 
 	train_prob = lr.predict_proba(train_features)
-
-	print "score: "
-	print lr.score(valid_features, valid_labels)
 
 	return numpy.concatenate((valid_prob[:,1], test_prob[:,1], train_prob[:,1]), axis = 0)
 
@@ -238,25 +259,24 @@ def preprocess(l, helpfulness):
 	# result list
 	review_length = reviewLength(l)
 	average_sentence_length = averageSentenceLength(l)
-	#punctuation_count = punctuationCount(l)
-	#cap_word_count = capWordCount(l)
+	punctuation_count = punctuationCount(l)
+	cap_word_count = capWordCount(l)
+	word2vec_score = word2VecScore(l)
 	title_word_count = titleWordsCount(l)
 	rating = getRating(l)
-	#word2vec_prob = word2VecProb(l, helpfulness)
 	#... other features
 
 	# for each review record, get the result of each feature, and append to feature matrix
 	for k in range(0,len(l)):
 		record = []
+		# ... append other features to the list
 		record.append(review_length[k])
 		record.append(average_sentence_length[k])
-		#record.append(punctuation_count[k])
-		#record.append(cap_word_count[k])
+		record.append(punctuation_count[k])
+		record.append(cap_word_count[k])
 		record.append(title_word_count[k])
 		record.append(rating[k])
-		#record.append(word2vec_prob[k])
-		# ... append other features to the list
-		
+		record.extend(word2vec_score[k])
 		result.append(record)
 
 	# scaling
@@ -264,19 +284,13 @@ def preprocess(l, helpfulness):
 	result = preprocessing.scale(result)
 	#get train label from "helpfulness"
 	for h in helpfulness:
+		if h[0] > h[1] * .6: #if more than half rated helpful
+			label.append(1) #positive
+		else:
+			label.append(-1) #negative
 		hrate = float(h[0])/h[1]
 		#label.append(hrate)
-		if hrate > 0.6: # 0.6: 53% positive
-			label.append(1) #possitive
-		else:
-			label.append(0) #negative
-	#csvfile = file('reviews.csv','wb')
-	#writer = csv.writer(csvfile)
-	#rows=[]
-	#for (line,l) in zip(result,label):
-	#	line.append(l)
-	#	rows.append(line)
-	#writer.writerows(rows)
+
 
 	# seperate training(40%), validation(30%) and testing(30%) sets
 	length = len(result)
@@ -294,20 +308,12 @@ def preprocess(l, helpfulness):
 	return (train_x, valid_x, test_x, train_t, valid_t, test_t)
 
 def logisticRegression(train_X, train_t, val_X, val_t):
-	C=[0.001, 0.01, 0.1, 1, 10, 100, 1000]
+	C=[0.1, 1, 10, 100, 1000]
 	for c in C:
 		lr=LogisticRegression(C=c, penalty='l2')
-		#sparse matrix
-		#train_X=csr_matrix(train_X)
-		#val_X=csr_matrix(val_X)
 		train_X = numpy.array(train_X)
 		val_X = numpy.array(val_X)
-		#print train_X
 		pred_val_t=lr.fit(train_X,train_t).predict(val_X)
-
-		#print "predictions: "
-		#print sum(1 for t in pred_val_t if t==1)
-		#print sum(1 for t in pred_val_t if t==0)
 
 		# calculat accuracy
 		mismatch=0
@@ -318,16 +324,15 @@ def logisticRegression(train_X, train_t, val_X, val_t):
 		print "C="+str(c)+", accuracy="+ str(accuracy)
 
 def SVM(train_X, train_t, val_X, val_t):
-    C=[0.001, 0.01, 0.1, 1, 10, 100]
+    C=[0.1, 1, 10, 100]
     for c in C:
-        clf = svm.SVC(C=c, kernel='linear') # change kernels
+        clf = svm.SVC(C=c, kernel='rbf') # change kernels
         #train_X=csr_matrix(train_X)
         #val_X=csr_matrix(val_X)
         train_X = numpy.array(train_X)
         val_X = numpy.array(val_X)
         pred_val_t=clf.fit(train_X,train_t).predict(val_X)
 
-        #print "predictions: "
 
         mismatch=0
         for r,p in zip(val_t, pred_val_t):
@@ -339,34 +344,64 @@ def SVM(train_X, train_t, val_X, val_t):
 def main():
 	raw_reviews = []
 	helpfulness = []
-	rev_size = 20000
+	rev_size = 50000
 	# progress bar in terminal
 	bar = progressbar.ProgressBar(maxval = rev_size , \
         widgets=[progressbar.Bar('=','[',']'), ' ', progressbar.Percentage()])
 	print('Opening json document for parsing')
 	bar.start()
 	i = 0
+	i_pos = 0
+	i_neg = 0
 	#with open('reviews_Baby.jsony.json') as f:
 	with open('reviews_Movies_and_TV.json') as f:
 	    for line in f:
-	    	if i >= rev_size:
+	#    	if i >= rev_size:
+	 #   		break
+	  #  	bar.update(i + 1)
+	    	if i_pos + i_neg >= rev_size:
 	    		break
-	    	bar.update(i + 1)
+	    	bar.update(i_pos + i_neg)
 	    	
 	    	line = json.loads(line)
 	    	# skip the lines with empty review
 	    	# skip the lines with ratings of helpfulness less than a threshold (5 for now)
-	    	helpfulThreshold = 5
+	    	
+	    	helpfulThreshold = 10
 	    	if len(line['reviewText']) != 0 and line['helpful'][1] >= helpfulThreshold:
 	    		i += 1
-	       		raw_reviews.append(line)
-	       		helpfulness.append(line['helpful'])
+	    		if line['helpful'][0] > line['helpful'][1] * .6: #if more than 60% helpful
+	    			if i_pos < rev_size/2:
+	    				i_pos += 1
+	    				raw_reviews.append(line)
+	    				helpfulness.append(line['helpful'])
+	    		else:
+	    			if i_neg < rev_size/2:
+		    			i_neg += 1
+		    			raw_reviews.append(line)
+	    				helpfulness.append(line['helpful'])
+	    		#raw_reviews.append(line)
+	    		#helpfulness.append(line['helpful'])
+	    		#i += 1
+
+
+
+					
 	bar.finish()
 	print('Parsing finished')
 	# get the feature matrix and labels
 	(train_x, valid_x, test_x, train_t, valid_t, test_t)= preprocess(raw_reviews, helpfulness)
 	# for testing
+
+	print "training examples: "
 	print len(train_x)
+	print "positive labels: "
+	print sum(1 for t in train_t if t==1)
+	print "negative labels: "
+	print sum(1 for t in train_t if t==-1)
+
+	print '------SVM------'
+	#SVM(train_x, train_t, valid_x, valid_t)
 	print len(valid_x)
 	print len(test_x)
 	
@@ -382,10 +417,7 @@ def main():
 	adjuct the labeling strategy (how to decide whether or not to drop the record, and whether it's helpful or not helpful)
 
 	'''
-	print len(train_x)
 	
-	print sum(1 for t in train_t if t==1)
-	print sum(1 for t in train_t if t==0)
 
 if __name__ == '__main__':
     main()
