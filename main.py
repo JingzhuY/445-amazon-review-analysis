@@ -259,8 +259,8 @@ def preprocess(l, helpfulness):
 	# result list
 	review_length = reviewLength(l)
 	average_sentence_length = averageSentenceLength(l)
-	punctuation_count = punctuationCount(l)
-	cap_word_count = capWordCount(l)
+	#punctuation_count = punctuationCount(l)
+	#cap_word_count = capWordCount(l)
 	word2vec_score = word2VecScore(l)
 	title_word_count = titleWordsCount(l)
 	rating = getRating(l)
@@ -353,12 +353,10 @@ def main():
 	i = 0
 	i_pos = 0
 	i_neg = 0
-	#with open('reviews_Baby.jsony.json') as f:
+
 	with open('reviews_Movies_and_TV.json') as f:
 	    for line in f:
-	#    	if i >= rev_size:
-	 #   		break
-	  #  	bar.update(i + 1)
+
 	    	if i_pos + i_neg >= rev_size:
 	    		break
 	    	bar.update(i_pos + i_neg)
