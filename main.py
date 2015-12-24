@@ -344,7 +344,7 @@ def SVM(train_X, train_t, val_X, val_t):
 def main():
 	raw_reviews = []
 	helpfulness = []
-	rev_size = 50000
+	rev_size = 50000 # set to 50000 if you want 20000 training examples (40%)
 	# progress bar in terminal
 	bar = progressbar.ProgressBar(maxval = rev_size , \
         widgets=[progressbar.Bar('=','[',']'), ' ', progressbar.Percentage()])
