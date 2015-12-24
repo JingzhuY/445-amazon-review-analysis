@@ -392,18 +392,6 @@ def main():
 	# get the feature matrix and labels
 	(train_x, valid_x, test_x, train_t, valid_t, test_t)= preprocess(raw_reviews, helpfulness)
 	# for testing
-
-	print "training examples: "
-	print len(train_x)
-	print "positive labels: "
-	print sum(1 for t in train_t if t==1)
-	print "negative labels: "
-	print sum(1 for t in train_t if t==-1)
-
-	print '------SVM------'
-	#SVM(train_x, train_t, valid_x, valid_t)
-	print len(valid_x)
-	print len(test_x)
 	
 	print '-------logisticRegression------'
 	logisticRegression(train_x, train_t, valid_x, valid_t)
